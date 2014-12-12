@@ -1,0 +1,4 @@
+http://yandex.com
+http://example.com
+http://notexisturl.com
+http://translate.google.com/notfoundpage
