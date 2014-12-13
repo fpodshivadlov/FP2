@@ -23,7 +23,13 @@
 
 (deftest crawle-test
   (testing "parsing html1"
-    (is (= (-> (crawle ["http://ya.ru"] 0 1) first :success) true))
-    (is (= (-> (crawle ["http://pageisnotexist"] 0 1) first :success) false))
+    (is (let [result (atom [])]
+      (crawle result ["http://ya.ru"] 0 1)
+      (= (-> @result first :success) true)
+    ))
+    (is (let [result (atom [])]
+      (crawle result ["http://pageisnotexist"] 0 1)
+      (= (-> @result first :success) false)
+    ))
   )
 )

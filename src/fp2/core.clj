@@ -2,7 +2,6 @@
   (:gen-class)
   (:require [org.httpkit.client :as http]
             [clojure.string :as string])
-
 )
 
 (def options
@@ -28,9 +27,10 @@
 )
 
 (defn crawle
-  [urls depth maxDepth]
+  [result urls depth maxDepth]
   (if
     (< depth maxDepth)
+    (doall
       (pmap
         (fn [url]
           (let [responce @(http/get url options)
@@ -43,26 +43,36 @@
                 redirectString (if (not= redirectUrl nil) (str " redirect " redirectUrl) "")]
             (cond
               (= status 200)
-                (let [newUrls (getUrlsFromBody body)]
-                  { :success true
-                    :url url
-                    :depth depth
-                    :countUrls (count newUrls)
-                    :redirectUrl redirectUrl
-                    :inner (crawle newUrls (inc depth) maxDepth)
-                  }
+                (let [newUrls (getUrlsFromBody body)
+                      inner (atom [])]
+                  (crawle inner newUrls (inc depth) maxDepth)
+                  (swap!
+                    result
+                    conj
+                    { :success true
+                      :url url
+                      :depth depth
+                      :countUrls (count newUrls)
+                      :redirectUrl redirectUrl
+                      :inner @inner
+                    }
+                  )
                 )
               (or error (>= status 400))
-                { :success false
-                  :url url
-                  :depth depth
-                }
+                (swap!
+                  result
+                  conj
+                  { :success false
+                    :url url
+                    :depth depth
+                  }
+                )
             )
           )
         )
         urls
       )
-
+    )
   )
 )
 
@@ -97,11 +107,12 @@
   (if
     (.exists (clojure.java.io/as-file filename))
     (let [urls (string/split (slurp filename) #"\r\n")
-          data (crawle urls 0 depth)]
-      (print (formatResult data))
+          result (atom [])]
+      (crawle result urls 0 (Integer/parseInt depth))
+      (print (formatResult @result))
     )
     (println "file isn't exist:" filename)
   )
 )
 
-;(-main "task/links.txt" 2)
+;(-main "task/links.txt" "2")
